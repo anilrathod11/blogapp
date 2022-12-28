@@ -1,12 +1,12 @@
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
-# # from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly,IsAdminUser
 from blogs.api.permissions import IsAdminOrReadOnly,IsReviewUserOrReadOnly
 from rest_framework.views import APIView
-from blogs.api.serializers import BlogSerializer, CategorySerializer
-from blogs.models import Blog, Category
+from blogs.api.serializers import BlogSerializer, CategorySerializer,CommentSerializer
+from blogs.models import Blog, Category,CommentOnBlog,ContentWriterPerformance
 from user_app.models import CustomeUser
 
 class BlogAV(APIView):
@@ -118,3 +118,53 @@ class CategoryDetailAV(APIView):
             return Response({'message':"With given id category already deleted"},status=status.HTTP_404_NOT_FOUND)
         category.delete()
         return Response({"message":"Category deleted successfully"},status=status.HTTP_204_NO_CONTENT) 
+    
+class AdminToAssignReviewer(APIView):
+    permission_classes = [IsAdminUser]
+    def put(self, request):
+        try:
+            blog = Blog.objects.get(pk=request.data["blog"])
+        except Blog.DoesNotExist:
+            return Response({'message':"Blog not found with given id"},status=status.HTTP_404_NOT_FOUND)
+        try:
+            user = CustomeUser.objects.get(pk=request.data["reviewer"])
+        except Exception as e:
+            # print(e)
+            return Response({'message':"With given reviewer_id reviewer not present"},status=status.HTTP_400_BAD_REQUEST)   
+        if user.role == "Reviewer":
+            blog.reviewer = user
+            blog.save()
+            serializer = BlogSerializer(blog)
+            return Response({"message":"Blog assign to reviewer successfull","updated_data":serializer.data},status=status.HTTP_200_OK)
+        else:
+            return Response({'message':"Invalid Reviewer"},status=status.HTTP_400_BAD_REQUEST)
+    
+class ReviewerAV(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self,request):
+        try:
+            user = CustomeUser.objects.get(pk=request.user.id)
+        except CustomeUser.DoesNotExist():
+            return Response({'message':"Only authenticated user can access this resources"},status=status.HTTP_400_BAD_REQUEST)
+        if user.role == "Reviewer":
+            blogs = Blog.objects.filter(reviewer=user)
+            serializer = BlogSerializer(blogs,many=True)
+            return Response({"list_of_blog_to_review":serializer.data},status=status.HTTP_200_OK)
+        else:
+            return Response({'message':"Only Reviewer can access this resource"}, status=status.HTTP_400_BAD_REQUEST)
+class CommentAV(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        if request.user.role == "Reviewer" or request.user.role == "Author":
+            comments = CommentOnBlog.objects.filter(commented_by=request.user)
+            serializer = CommentSerializer(comments,many=True)
+            return Response({"list_of_comment":serializer.data},status=status.HTTP_200_OK)
+        else:
+            return Response({"message":"Only reviewer and author can see all comments"},status=status.HTTP_400_BAD_REQUEST)
+    # def post(self, request):
+    #     serializer = CategorySerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         serializer.save()
+    #         return Response({"message":"Category object created successfully","created_object":serializer.data},status=status.HTTP_201_CREATED)
+    #     else:
+    #         return Response(serializer.errors)
