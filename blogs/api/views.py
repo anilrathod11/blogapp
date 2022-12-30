@@ -1,13 +1,21 @@
 from rest_framework.response import Response
 from rest_framework.exceptions import ValidationError
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view,permission_classes
 from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly,IsAdminUser
 from blogs.api.permissions import IsAdminOrReadOnly,IsReviewUserOrReadOnly
 from rest_framework.views import APIView
 from blogs.api.serializers import BlogSerializer, CategorySerializer,CommentSerializer
 from blogs.models import Blog, Category,CommentOnBlog,ContentWriterPerformance
 from user_app.models import CustomeUser
+# from blogs.api.send_mail import send_mail
+from blogs.tasks import send_mail_func
+from blogs.tasks import test_func
+
+@api_view(["GET",])
+def test(request):
+    test_func.delay()
+    return Response({"message":"Celery tested successsfully"},status=status.HTTP_200_OK)
 
 class BlogAV(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -133,8 +141,14 @@ class AdminToAssignReviewer(APIView):
             return Response({'message':"With given reviewer_id reviewer not present"},status=status.HTTP_400_BAD_REQUEST)   
         if user.role == "Reviewer":
             blog.reviewer = user
+            blog.status = request.data["status"]
             blog.save()
             serializer = BlogSerializer(blog)
+            message='Hi, Admin this side, I am going to add blog for review to you please check it!'
+            mail_subject='Blog to review'
+            send_mail_func.delay(message,mail_subject,
+                                user.email)
+            # send_mail(html="",text='Hi, Admin this side, I am going to add blog for review to you please check it!',subject='Blog to review',from_email='anil.pune11@gmail.com',to_emails=['rathodanil6512@gmail.com'])
             return Response({"message":"Blog assign to reviewer successfull","updated_data":serializer.data},status=status.HTTP_200_OK)
         else:
             return Response({'message':"Invalid Reviewer"},status=status.HTTP_400_BAD_REQUEST)
@@ -161,10 +175,39 @@ class CommentAV(APIView):
             return Response({"list_of_comment":serializer.data},status=status.HTTP_200_OK)
         else:
             return Response({"message":"Only reviewer and author can see all comments"},status=status.HTTP_400_BAD_REQUEST)
-    # def post(self, request):
-    #     serializer = CategorySerializer(data=request.data)
-    #     if serializer.is_valid():
-    #         serializer.save()
-    #         return Response({"message":"Category object created successfully","created_object":serializer.data},status=status.HTTP_201_CREATED)
-    #     else:
-    #         return Response(serializer.errors)
+    def post(self, request):
+        if request.user.role == "Reviewer" or request.user.role == "Author" or request.user.role == "Admin":
+            try:
+                blog = Blog.objects.get(pk=request.data["blog_id"])
+            except Blog.DoesNotExist():
+                return Response({'message':"With given blog_id blog not found"},status=status.HTTP_404_NOT_FOUND)
+            request.data['commented_by'] = request.user.id
+            request.data['blog'] = blog.id
+            serializer = CommentSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                blog.status = request.data["status"]
+                blog.save()
+                return Response({"message":"Comment on blog is created successfully","created_object":serializer.data},status=status.HTTP_201_CREATED)
+            else:
+                return Response(serializer.errors)
+        else:
+            return Response({'message':"Only admin, reviewer and author can comment on blog"}, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(["GET",])
+@permission_classes([IsAuthenticated])
+def author_blog_comment(request,pk):
+    try:
+        blog = Blog.objects.get(pk=pk)
+    except Blog.DoesNotExist():
+        return Response({"message":"Blog not found with given blog id"}, status=status.HTTP_404_NOT_FOUND)
+    if request.method == "GET" and request.user.role == "Author":
+        try:
+            blog_comment = CommentOnBlog.objects.filter(blog=blog)
+        except CommentOnBlog.DoesNotExist():
+            return Response({"message":"with blog id comment notg present"},status=status.HTTP_404_NOT_FOUND)
+        serializer = CommentSerializer(blog_comment,many=True)
+        return Response({"list_of_comment_on_blog":serializer.data},status=status.HTTP_200_OK)
+    else:
+        return Response({"message":"Only author can access this resource"},status=status.HTTP_400_BAD_REQUEST)
+        
