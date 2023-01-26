@@ -17,6 +17,8 @@ class Blog(models.Model):
     author = models.ForeignKey(CustomeUser, on_delete=models.CASCADE,related_name='user_blog')
     category = models.ForeignKey(Category,on_delete=models.CASCADE,related_name='blog_category')
     reviewer = models.ForeignKey(CustomeUser,on_delete=models.CASCADE,related_name='blog_to_review',null=True)
+    public = models.BooleanField(default=False)
+    archive = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True,editable=False)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self):
@@ -43,3 +45,18 @@ class ContentWriterPerformance(models.Model):
     def __str__(self):
         return self.reviewer
     
+    
+class RandomPicture(models.Model):
+    user = models.ForeignKey(CustomeUser, on_delete=models.CASCADE,related_name='user_image')
+    rand_pic = models.ImageField(upload_to="image",blank=True)
+    
+    def __str__(self):
+        return self.user.username
+
+class StripeCustomer(models.Model):
+    user = models.OneToOneField(to=CustomeUser, on_delete=models.CASCADE)
+    stripeCustomerId = models.CharField(max_length=255)
+    stripeSubscriptionId = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.user.username

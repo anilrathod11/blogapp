@@ -5,17 +5,13 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework.permissions import IsAuthenticated,IsAuthenticatedOrReadOnly,IsAdminUser
 from blogs.api.permissions import IsAdminOrReadOnly,IsReviewUserOrReadOnly
 from rest_framework.views import APIView
-from blogs.api.serializers import BlogSerializer, CategorySerializer,CommentSerializer
-from blogs.models import Blog, Category,CommentOnBlog,ContentWriterPerformance
+from blogs.api.serializers import BlogSerializer, CategorySerializer,CommentSerializer,ImageSerializer
+from blogs.models import Blog, Category,CommentOnBlog,ContentWriterPerformance,RandomPicture
 from user_app.models import CustomeUser
+from sub_plan_app.models import Subscription
 # from blogs.api.send_mail import send_mail
 from blogs.tasks import send_mail_func
 from blogs.tasks import test_func
-
-@api_view(["GET",])
-def test(request):
-    test_func.delay()
-    return Response({"message":"Celery tested successsfully"},status=status.HTTP_200_OK)
 
 class BlogAV(APIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
@@ -44,18 +40,21 @@ class BlogAV(APIView):
             print("Rathod")
             return Response({'message':"Only authenticated user can access this resource"}, status=status.HTTP_400_BAD_REQUEST)
     def post(self, request):
-        user = CustomeUser.objects.get(pk=request.user.id)
-        if user.role == "Author" or user.role == "Writer":
-            request.data["author"] = request.user.id
-            serializer = BlogSerializer(data=request.data)
-            if serializer.is_valid():
-                serializer.save()
-                return Response({"message":"Blog object created successfully","created_object":serializer.data},status=status.HTTP_201_CREATED)
+        try:
+            user = CustomeUser.objects.get(pk=request.user.id)
+            if user.role == "Author" or user.role == "Writer" or user.role == "Admin":
+                request.data["author"] = request.user.id
+                serializer = BlogSerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response({"message":"Blog object created successfully","created_object":serializer.data},status=status.HTTP_201_CREATED)
+                else:
+                    return Response(serializer.errors)
             else:
-                return Response(serializer.errors)
-        else:
-            return Response({'message':"Only author and writer can post blog"},status=status.HTTP_400_BAD_REQUEST)
-        
+                return Response({'message':"Only author and writer can post blog"},status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({"message":e.args}, status=status.HTTP_400_BAD_REQUEST)
+
 class BlogDetailAV(APIView):
     # permission_classes = [IsAdminOrReadOnly]
     def get(self, request, pk):
@@ -211,3 +210,50 @@ def author_blog_comment(request,pk):
     else:
         return Response({"message":"Only author can access this resource"},status=status.HTTP_400_BAD_REQUEST)
         
+        
+class UploadPicture(APIView):
+    permission_classes = [IsAuthenticated]
+    def get(self, request):
+        image_object = RandomPicture.objects.all()
+        # serializer = StreamPlatformSerializer(platform,many=True,context={'request': request})
+        serializer = ImageSerializer(image_object,many=True)
+        return Response({"list_of_image":serializer.data},status=status.HTTP_200_OK)
+    def post(self, request):
+        serializer = ImageSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"Image object created successfully","created_object":serializer.data},status=status.HTTP_201_CREATED)
+        else:
+            return Response(serializer.errors)
+        
+@api_view(["GET",])
+@permission_classes([IsAuthenticated])
+def get_active_blog(request):
+    try:
+        sub_validity = Subscription.objects.get(user=request.user)
+    # except Subscription.DoesNotExist():
+    except Exception as e:
+        return Response({"message":"You are not prime member, pls buy subscription or you can continue with our public blogs"}, status=status.HTTP_404_NOT_FOUND)
+    if request.method == "GET":
+        if (sub_validity.archive != True or sub_validity.free_trail == True):
+            active_blog = Blog.objects.filter(status="Active")
+            serializer = BlogSerializer(active_blog,many=True)
+            return Response({"list_of_active_blog":serializer.data},status=status.HTTP_200_OK)
+        else:
+            return Response({"message":"Subscription Expired!"},status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({"message":"Only reader can read active blog"},status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['GET',])
+@permission_classes([IsAuthenticated])
+def get_public_active_blog(request):
+    try:
+        public_blog = Blog.objects.filter(status="Active",public=True)
+    except Blog.DoesNotExist():
+        return Response({'message':"Public Active blog does not exit"}, status=status.HTTP_404_NOT_FOUND)
+    serializer = BlogSerializer(public_blog,many=True)
+    return Response({'public_active_blog':serializer.data}, status=status.HTTP_200_OK)
+        
+# @api_view(["GET",])
+# @permission_classes([IsAuthenticated])
+# def free_trail(request):

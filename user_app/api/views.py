@@ -17,6 +17,7 @@ class CustomAuthToken(ObtainAuthToken):
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.objects.get_or_create(user=user)
+        print(request.data)
         return Response({
             'token': token.key,
             'user_id': user.pk,
@@ -51,7 +52,7 @@ def registration_view(request):
         return Response(data,status=status.HTTP_400_BAD_REQUEST) 
     
 @api_view(['GET',])
-@permission_classes((IsAuthenticated, ))
+@permission_classes((IsAdminUser,))
 def user_list_view(request):
     if request.method == "GET":
         users = CustomeUser.objects.all()

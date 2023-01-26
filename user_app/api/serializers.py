@@ -1,13 +1,11 @@
 from rest_framework import serializers
-# from django.conf import settings
-# User = settings.AUTH_USER_MODEL
 from user_app.models import CustomeUser
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomeUser
-        fields = '__all__'
-
+        fields = ["id","username","email","role"]
+        read_only_fields = ['id']
 
 class RegistrationSerializer(serializers.ModelSerializer):
     password_confirmation = serializers.CharField(style={'input_type':"password"},write_only=True)

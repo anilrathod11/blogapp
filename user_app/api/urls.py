@@ -7,6 +7,5 @@ urlpatterns = [
     path('login/',views.CustomAuthToken.as_view(),name = 'login'),
     path('register/',registration_view,name = 'register'),
     path('logout/',logout_view,name = 'logout'),
-    path('user/list/',user_list_view,name="user_list")
-
+    path('user/list/',user_list_view,name="user_list"),
 ]
