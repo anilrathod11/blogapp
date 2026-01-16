@@ -1,2 +1,5 @@
 github_token = "ghp_zVuw8MJm2lIs0IuK66JoSXFQ72345rt"
 key = "sk-proj-30aUZFVfvDZ1vP6Dv_9y3Wwsedrtyhjf;gdlhwaerhjgkhjlewrthjk;ilkjfdhsytwterhgj"
+AUTOGEN_MODEL_TYPE="openai"
+DEVOPS_MCP_SERVER_URL="http://127.0.0.1:8012/devops/mcp"
+SECSCAN_MCP_SERVER_URL="http://127.0.0.1:8080/secops/mcp"
