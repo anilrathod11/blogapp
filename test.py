@@ -1,0 +1,14 @@
+tes = 'curl -u "${Jfrog_USERNAME}:${Jfrog_PASSWORD}"'
+AZURE_KEY_VAULT_URL=https://agentic-ai-assist-dev.vault.a123.net/ 
+
+AZURE_CLIENT_ID="e234ebe2c-f8ec-2345-9962-2f524729768b"
+
+AZURE_TENANT_ID="a1a556a4-ef96-44a7-9887-1234567e6ey4" 
+
+AZURE_CLIENT_SECRET="1234twy46u5~T~tAex0UTW6gI1yd5gV6083SgF~c.dwa0x"
+
+  
+
+TENANT_ID="2132435jh-dd2c-4d1f-af13-5abe46b99921"
+
+CLIENT_ID="7f4e4477-1234-49cd-n234-dce140d6ec34"
