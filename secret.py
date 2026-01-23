@@ -1,5 +1,5 @@
 REDACTED_SECRET
-key = "sk-proj-30aUZFVfvDZ1vP6Dv_9y3Wwsedrtyhjfrtyuigdlhwaerhjgkhjlewrthjk;ilkjfdhsytwterhgj"
+key = "sk-proj-30aUZFVfvDZ1vP6Dv_9y3Wwsedrtyhjfrtyuigdlhwaerhjgkhjlewrthjkilkjfdhsytwterhgj"
 AUTOGEN_MODEL_TYPE="openai"
 DEVOPS_MCP_SERVER_URL="http://127.0.0.1:8012/devops/mcp"
 SECSCAN_MCP_SERVER_URL="http://127.0.0.1:8080/secops/mcp"
